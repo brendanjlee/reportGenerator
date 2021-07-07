@@ -1,17 +1,17 @@
-import os
-import sys
-import numpy as np
-from math import floor, ceil
+import matplotlib
+matplotlib.use('Agg') # run matplotlib on thread
 import matplotlib.pyplot as plt
-from detect_delimiter import detect
-from reportlab.pdfbase.pdfdoc import PDFStreamFilterBase85Encode
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+import os, sys
+import numpy as np
+from math import ceil
+from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 from PIL import Image
 from datetime import date
+from csv import reader
 
 def resource_path(relative_path):
     """Gets the relative path of a file\n
@@ -25,19 +25,30 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 class Plate:
-  # plate comes in as np array
-  def __init__(self, plate_array, plate_name=None) -> None:
+  def __init__(self, plate_data, plate_name=None) -> None:
+    """Creates a plate object that stores the measurements and methods for each
+    individual plate.
+
+    Args:
+        plate_data (np.array): np.array of the xyz file
+        plate_name (string, optional): Name of the plate (no extention).
+    """
     self.name = 'plate'
     if plate_name is not None:
-      self.name = plate_name
-    self.data = plate_array
+      self.name = plate_name  # name without extention
+
+    self.data = plate_data
     self.thickness_list = None
-    self.csvFile = None
-    self.histogram = None
-    self.heatmap = None
+    self.plate_dir = None # current working dir of plate: cwd(root)/userfiles/plate_name/
+
+    # Absolute Paths to saved files
+    self.csv_path = None
+    self.histogram_path = None
+    self.heatmap_path = None
     self.report = None
 
   def set_thickness(self, thickness_list):
+    # Sets the current thickness
     self.thickness_list = thickness_list
 
   def get_stddev(self):
@@ -48,15 +59,22 @@ class Plate:
 
   def get_mean(self):
     if self.thickness_list is None:
-      print('Calculate thickness first')
+      print('>>> Calculate thickness first')
       return
     return np.mean(self.thickness_list)
 
   def generate_csv(self):
+    """Generates a csv file based on the thickness measurement of the current
+    plate.
+
+    Returns:
+        string: path to the csv file
+    """
     if self.thickness_list is None:
-      print('Calculate thickness first')
+      print('>>> Calculate thickness first')
       return
 
+    # Set up constraints
     cols = 11
     rows = ceil((len(self.thickness_list)) / cols)
     file_content = ''
@@ -84,12 +102,23 @@ class Plate:
     file_content += ('Thickness_Mean, {}\n'.format(self.get_mean()))
     file_content += ('Thickness_StdDev, {}'.format(self.get_stddev()))
 
-    self.csvFile = file_content
+    # save to csv file
+    csvPath = os.path.join(self.plate_dir, self.name + '_csv.csv')
+    f = open(csvPath, 'w')
+    f.write(file_content)
+    f.close()
+
+    self.csv_path = csvPath
     return file_content
 
   def generate_histogram(self):
+    """Generates a histogram using matplotlib and saves it as a png image
+
+    Returns:
+        string: path to the histogram
+    """
     if self.thickness_list is None:
-      print('Calculate thickness first')
+      print('>>> Calculate thickness first')
       return
 
     count, bins = np.histogram(self.thickness_list)
@@ -97,12 +126,25 @@ class Plate:
     plt.xlabel('mm')
     plt.ylabel('frequency')
     plt.title('Distribition of Thickness')
-    plt.show()
+
     # TODO find a way to return object
+    # save to png file
+    histoPath = os.path.join(self.plate_dir, self.name + '_hist.png')
+    plt.savefig(histoPath)
+    plt.clf()
+
+    print('>>> Histogram Generated')
+    self.histogram_path = histoPath
+    return histoPath
 
   def generate_heatmap(self):
+    """Generates a heatmap using matplotlib and saves it as a png image
+
+    Returns:
+        string: path to the heatmap
+    """
     if self.thickness_list is None:
-      print('Calculate thickness first')
+      print('>>> Calculate thickness first')
       return
 
     # Set up contraints
@@ -113,7 +155,6 @@ class Plate:
     # it's actually already a np arr for now
     z = self.thickness_list
 
-
     x = list(range(1, cols + 1))
     y = list(range(1, rows + 1))
     Z = z.reshape(-1, cols)
@@ -121,16 +162,33 @@ class Plate:
 
     # Generate Heatmap
     cont = plt.contourf(X,Y,Z, cmap='jet', vmin=np.min(Z), vmax=np.max(Z))
+    plt.gca().set_aspect('equal')
     plt.colorbar(label='mm')
     plt.scatter(X, Y, marker=".", c='black')
-    plt.show()              # uncomment to see the graph instead of saving it
-    # TODO figure out a way to return as object and save to self
 
-  def generate_report(self, scanner_name):
-    # Paths
-    reportPath = resource_path(self.name + '.pdf')
-    heatmap_fullpath = ''
-    histo_fullpath = ''
+    # save to png file
+    heatPath = os.path.join(self.plate_dir, self.name + '_heat.png')
+    plt.savefig(heatPath)
+    plt.clf()
+
+    print('>>> Heatmap Generated')
+    self.heatmap_path = heatPath
+    return heatPath
+
+  # TODO also take in scanner name
+  def generate_report(self, scanner_name='Brendan'):
+    """Generates a PDF report of the current plate. Uses all generated figures
+    to print onto the PDF. Check ReportLabs documentation to modify to the
+    format of the file
+
+    Args:
+        scanner_name (str): Name of Scanner.
+    """
+    #reportPath = resource_path(self.name + '.pdf')
+    reportPath = os.path.join(self.plate_dir, self.name + '.pdf')
+    heatmap_fullpath = self.heatmap_path
+    histo_fullpath = self.histogram_path
+    csv_fullpath = self.csv_path
 
     # Create canvas
     can = canvas.Canvas(reportPath, pagesize=letter) # 612, 729
@@ -143,19 +201,19 @@ class Plate:
     can.drawString(left_margin, 680, "Report on {}".format(self.name))
 
     # Purdue Logo
-    im = Image.open(resource_path('purdue_logo.png'))
+    im = Image.open(resource_path('logos/purdue_logo.png'))
     can.drawInlineImage(im, 20, 740, width=100.44, height=30)
 
     # Fermi Logo
-    im = Image.open(resource_path('fermi_logo.png'))
+    im = Image.open(resource_path('logos/fermi_logo.png'))
     can.drawInlineImage(im, 173, 740, width=100, height=41)
 
     # CMS Logo
-    im = Image.open(resource_path('cms_logo.png'))
+    im = Image.open(resource_path('logos/cms_logo.png'))
     can.drawInlineImage(im, 326, 720, width=70, height=70)
 
     # CMSC Logo
-    im = Image.open(resource_path('cmsc_logo.png'))
+    im = Image.open(resource_path('logos/cmsc_logo.png'))
     can.drawInlineImage(im, 461, 720, width=90, height=90)
 
     # Write Date
@@ -220,7 +278,7 @@ class Plate:
 
     # Get table
     # TODO rewrite to get it working or string or file
-    '''with open(csv_fullpath, 'r') as read_obj:
+    with open(csv_fullpath, 'r') as read_obj:
         csv_reader = reader(read_obj)
         values = list(csv_reader)
         values = values[:len(values) - 2]
@@ -230,22 +288,8 @@ class Plate:
             ('BOX', (0, 0), (-1, -1), 0.25, colors.black),
         ]))
         t.wrapOn(can, 0, 0)
-        t.drawOn(can, 110, h/2)'''
+        t.drawOn(can, 110, h * 0.25)
 
     # TODO save to self
+    print('>>> Report Generated')
     can.save()
-
-
-############## Testing Area ##############
-f = open(resource_path('example.xyz'))
-delimniter = (detect(f.readline()))
-
-plate_arr = np.genfromtxt(resource_path('example.xyz'), delimiter=delimniter)
-fixture_arr = np.genfromtxt(resource_path('fixture.xyz'), delimiter=delimniter)
-
-plate_name = os.path.splitext("example.xyz")[0]
-
-p1 = Plate(plate_arr, plate_name)
-
-p1.thickness_list = (plate_arr[0: , 2]) # index by slicing
-thic = p1.thickness_list
