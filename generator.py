@@ -1,19 +1,17 @@
-from plate import Plate, resource_path
-from io import TextIOWrapper
-import os
-from pathlib import Path
-# test imports
-import numpy as np
 from detect_delimiter import detect
-import csv
-# path
-from pathlib import Path
-import zipfile
+from io import TextIOWrapper
 from shutil import rmtree
+from pathlib import Path
+from plate import Plate
+import numpy as np
+import zipfile
+import csv
+import os
+
 
 class Generator:
   # comes in as np array
-  def __init__(self, fixture, plateList, cwd) -> None:
+  def __init__(self, fixture, plateList, cwd, scanner) -> None:
     """Container that holds methods for calculating the thickness of the plates
     with fixtures.
 
@@ -22,6 +20,7 @@ class Generator:
         plateList (list of np.array): list of np.arrays of the uploaded plate XYZ files
         cwd (str): current working directory (userfiles)
     """
+    self.scanner_name = scanner
     self.fixture = fixture
     self.plateList = plateList # list of Plate objects
     self.cwd = cwd # cwd/userfiles
@@ -69,6 +68,7 @@ class Generator:
     for p in self.plateList:
       # calculate thickness
       self.calculate_thickness(p)
+
       # set current plate directory
       self.set_plate_directory(p)
 
@@ -76,7 +76,7 @@ class Generator:
       p.generate_csv()
       p.generate_histogram()
       p.generate_heatmap()
-      p.generate_report()
+      p.generate_report(self.scanner_name)
 
   def zip_files(self):
     """Zips all of the report files for retur to the user
@@ -112,6 +112,7 @@ def read_fixture(fixtureFile):
   x = list(csv.reader(csvFile, delimiter=delimiter))
   fixture = np.array(x).astype('float')
   print('Currently processing: {}'.format(fixtureFile.filename))
+
   return fixture
 
 def read_plates(plateFilesRequest):
@@ -128,14 +129,18 @@ def read_plates(plateFilesRequest):
   delimiter = None
   for plateFile in plateFilesRequest:
     plate_csv_file = TextIOWrapper(plateFile, encoding='utf-8')
+
     # Find delimiter on the first file
     if delimiter is None:
       delimiter = detect(plate_csv_file.readline())
       plate_csv_file.seek(0, 0)
+
     # Convert file into a list
     x = list(csv.reader(plate_csv_file, delimiter=delimiter))
     plate_data = np.array(x).astype('float')
+
     # Create Plate object and append to plateList
     curr_plate = Plate(plate_data, os.path.splitext(plateFile.filename)[0])
     plateList.append(curr_plate)
+
   return plateList

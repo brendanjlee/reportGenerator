@@ -1,29 +1,33 @@
-from typing import TextIO
-from flask import Flask, render_template, request, url_for, flash, redirect, send_from_directory
-from io import TextIOWrapper
-from detect_delimiter import detect
-from werkzeug.utils import secure_filename
-import os, sys
-import csv
-import numpy as np
-#
+from flask import Flask, render_template, request, redirect, send_from_directory, abort
 from generator import Generator, read_fixture, read_plates
 from pathlib import Path
+import os
 
 # Server setup
 cwd = os.getcwd()
-ALLOWED_EXTENSIONS = {'xyz'}
 
+# Create Flask app
 app = Flask(__name__)
 
 def allowed_file(filename):
+  """Checks if the filename can be accepted.
+
+  Args:
+      filename (string): the filename with extention
+
+  Returns:
+      Bool: whether the filetype is supported or not
+  """
+  ALLOWED_EXTENSIONS = {'xyz'}
   return '.' in filename and \
     filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-  # end of allowed_file()
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
   if request.method == 'POST':
+    # scanner name
+    scanner_name = request.form['username']
+
     # Process Fixture file into np.array
     fixture_file = request.files['file']
     fixture = read_fixture(fixture_file)
@@ -37,7 +41,7 @@ def upload_file():
     Path(generator_dir).mkdir(parents=True, exist_ok=True)
 
     # Initialize generator
-    generator = Generator(fixture=fixture, plateList=plateList, cwd=generator_dir)
+    generator = Generator(fixture=fixture, plateList=plateList, cwd=generator_dir, scanner=scanner_name)
     generator.process_plates()
 
     # Zip files into cwd/reports.zip
@@ -46,12 +50,12 @@ def upload_file():
     return redirect('/files/reports.zip')
 
   return render_template('index.html')
-# end of upload_file()
 
 @app.route('/files/<path:path>',methods = ['GET','POST'])
 def get_files(path):
+  """Returns the processed reports back to the user as a zipped folder.
+  """
   DOWNLOAD_DIRECTORY = os.getcwd()
-  """Download a file."""
   try:
       return send_from_directory(DOWNLOAD_DIRECTORY, path, as_attachment=True)
   except FileNotFoundError:

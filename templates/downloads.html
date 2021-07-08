@@ -1,9 +1,23 @@
+<!DOCTYPE html>
 <html>
-   <body>
-      <form action = "http://localhost:5000/uploader" method = "POST"
-         enctype = "multipart/form-data">
-         <input type = "file" name = "file" />
-         <input type = "submit"/>
+  <head>
+    <meta charset='utf-8'>
+    <title>Flatplate Report Generator</title>
+  </head>
+  <body>
+    <header class='header'>
+      <h1>Flatplae Thickness Report Generator</h1>
+    </header>
+    <main class='main'>
+      <h2>Upload new Fixture and Plate Files</h2>
+      <form method=post enctype="multipart/form-data">
+        <p>Fixture File</p>
+        <input type=file name=file class='fixture-input'><br>
+        <p>Plate File</p>
+        <input type="file" name='file[]' multiple='' class='plate-input'><br>
+        <br>
+        <input type=submit value=Upload>
       </form>
-   </body>
+    </main>
+  </body>
 </html>
