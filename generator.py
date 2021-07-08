@@ -1,6 +1,7 @@
+import shutil
 from detect_delimiter import detect
 from io import TextIOWrapper
-from shutil import rmtree
+from shutil import rmtree, make_archive
 from pathlib import Path
 from plate import Plate
 import numpy as np
@@ -64,7 +65,7 @@ class Generator:
           5. Generate and save heatmap
           6. Generate and save report
     """
-    print('>> Processing Plates')
+    print('> Processing Plates')
     for p in self.plateList:
       # calculate thickness
       self.calculate_thickness(p)
@@ -81,9 +82,27 @@ class Generator:
   def zip_files(self):
     """Zips all of the report files for retur to the user
     """
+    # Zip folder
     print('>> Zipping Files')
+    try:
+      make_archive(self.cwd, 'zip', self.cwd)
+    except OSError as e:
+      print('>>> Could not zip folder.\nError at {}'.format(e))
+    print('>>> Zipping complete.')
+
+    # Delete working directory
+    print('Deleting directory.')
+    try:
+      rmtree(self.cwd)
+    except OSError as e:
+      print('>>> Could not remove directory.\n Error at {}'.format(e))
+    return
+
     reports_zip = zipfile.ZipFile("reports.zip", "w")
     for dirname, subdirs, files in os.walk(self.cwd):
+      print('dirname: {}'.format(dirname))
+      print('subdirs: {}'.format(subdirs))
+      print('files: {}'.format(files))
       for filename in files:
         extention = os.path.splitext(filename)[-1]
         # Save only for pdf reports
@@ -111,7 +130,7 @@ def read_fixture(fixtureFile):
   csvFile.seek(0, 0)
   x = list(csv.reader(csvFile, delimiter=delimiter))
   fixture = np.array(x).astype('float')
-  print('Currently processing: {}'.format(fixtureFile.filename))
+  print('> Currently processing fixture: {}'.format(fixtureFile.filename))
 
   return fixture
 

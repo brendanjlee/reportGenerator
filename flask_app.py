@@ -6,6 +6,12 @@ import os
 # Server setup
 cwd = os.getcwd()
 
+if os.path.exists('reports.zip'):
+  os.remove('reports.zip')
+  print('> Deleted Zip File')
+else:
+  print('> No Zip file to delete')
+
 # Create Flask app
 app = Flask(__name__)
 
@@ -36,8 +42,8 @@ def upload_file():
     plate_files = request.files.getlist("file[]")
     plateList = read_plates(plate_files)
 
-    # Create temp directory (cwd/userfiles/..)
-    generator_dir = os.path.join(cwd, 'userfiles')
+    # Create temp directory (cwd/reports/..)
+    generator_dir = os.path.join(cwd, 'reports')
     Path(generator_dir).mkdir(parents=True, exist_ok=True)
 
     # Initialize generator

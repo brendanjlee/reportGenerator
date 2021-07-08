@@ -39,7 +39,7 @@ class Plate:
 
     self.data = plate_data
     self.thickness_list = None
-    self.plate_dir = None # current working dir of plate: cwd(root)/userfiles/plate_name/
+    self.plate_dir = None # current working dir of plate: cwd(root)/reports/plate_name/
 
     # Absolute Paths to saved files
     self.csv_path = None
