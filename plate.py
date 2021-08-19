@@ -25,7 +25,7 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 class Plate:
-  def __init__(self, plate_data, plate_name=None) -> None:
+  def __init__(self, plate_data, ply_thickness, plate_name=None) -> None:
     """Creates a plate object that stores the measurements and methods for each
     individual plate.
 
@@ -39,7 +39,8 @@ class Plate:
 
     self.data = plate_data
     self.thickness_list = None
-    self.plate_dir = None # current working dir of plate: cwd(root)/reports/plate_name/
+    self.plate_dir = None # curr"ent working dir of plate: cwd(root)/reports/plate_name/
+    self.ply_thickness = ply_thickness
 
     # Absolute Paths to saved files
     self.csv_path = None
@@ -161,7 +162,24 @@ class Plate:
     X, Y = np.meshgrid(x, y)
 
     # Generate Heatmap
-    cont = plt.contourf(X,Y,Z, cmap='jet', vmin=np.min(Z), vmax=np.max(Z))
+    if (self.ply_thickness == '3ply'):
+      vmin = 0.17
+      vmax = 0.22
+    elif (self.ply_thickness == '4ply'):
+      vmin = 0.38
+      vmax = 0.48
+    elif (self.ply_thickness == '5ply'):
+      vmin = 0.500
+      vmax = 0.600
+    else:
+      vmin = np.min(Z)
+      vmax = np.max(Z)
+
+    cmap = plt.cm.jet  # colormap
+    cont = plt.contourf(X,Y,Z, cmap=cmap, vmin=vmin, vmax=vmax) # plot
+    cont.cmap.set_under('lightgrey')  # color options below range
+    cont.cmap.set_over('dimgrey') # color options above range
+
     plt.gca().set_aspect('equal')
     plt.colorbar(label='mm')
     plt.scatter(X, Y, marker=".", c='black')

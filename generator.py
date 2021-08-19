@@ -1,4 +1,3 @@
-import shutil
 from detect_delimiter import detect
 from io import TextIOWrapper
 from shutil import rmtree, make_archive
@@ -12,7 +11,7 @@ import os
 
 class Generator:
   # comes in as np array
-  def __init__(self, fixture, plateList, cwd, scanner) -> None:
+  def __init__(self, fixture, plateList, cwd, scanner, ply_thickness) -> None:
     """Container that holds methods for calculating the thickness of the plates
     with fixtures.
 
@@ -25,6 +24,7 @@ class Generator:
     self.fixture = fixture
     self.plateList = plateList # list of Plate objects
     self.cwd = cwd # cwd/userfiles
+    self.ply_thickness = ply_thickness # plate thickness: 3,4 or 5 ply
 
   def calculate_thickness(self, plate):
     """Calculates and sets the thickness of an individual plate
@@ -96,27 +96,6 @@ class Generator:
       rmtree(self.cwd)
     except OSError as e:
       print('>>> Could not remove directory.\n Error at {}'.format(e))
-    return
-
-    reports_zip = zipfile.ZipFile("reports.zip", "w")
-    for dirname, subdirs, files in os.walk(self.cwd):
-      print('dirname: {}'.format(dirname))
-      print('subdirs: {}'.format(subdirs))
-      print('files: {}'.format(files))
-      for filename in files:
-        extention = os.path.splitext(filename)[-1]
-        # Save only for pdf reports
-        if extention.lower() == '.pdf':
-          filePath = os.path.join(dirname, filename)
-          reports_zip.write(filePath, os.path.basename(filePath))
-    reports_zip.close()
-
-    # delete working directory
-    print('current cwd: {}'.format(self.cwd))
-    try:
-      rmtree(self.cwd)
-    except OSError as e:
-      print("Error: {}".format(e))
 
 # Global functions
 def read_fixture(fixtureFile):
@@ -134,7 +113,7 @@ def read_fixture(fixtureFile):
 
   return fixture
 
-def read_plates(plateFilesRequest):
+def read_plates(plateFilesRequest, ply_thickness):
   """Reads in a list of file requests, creates a list of Plate objects for each
   requested file. Each Plate object currently contains (name, 2D matrix of xyz)
 
@@ -159,7 +138,7 @@ def read_plates(plateFilesRequest):
     plate_data = np.array(x).astype('float')
 
     # Create Plate object and append to plateList
-    curr_plate = Plate(plate_data, os.path.splitext(plateFile.filename)[0])
+    curr_plate = Plate(plate_data=plate_data, ply_thickness=ply_thickness, plate_name=os.path.splitext(plateFile.filename)[0])
     plateList.append(curr_plate)
 
   return plateList

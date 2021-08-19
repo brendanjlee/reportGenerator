@@ -5,6 +5,8 @@ import os
 
 # Server setup
 cwd = os.getcwd()
+#cwd = '/home/lee3420/reportGenerator' # for web app
+
 
 if os.path.exists('reports.zip'):
   os.remove('reports.zip')
@@ -34,20 +36,24 @@ def upload_file():
     # scanner name
     scanner_name = request.form['username']
 
+    # ply thickness
+    ply_thickness = request.form['ply-buttons']
+
     # Process Fixture file into np.array
     fixture_file = request.files['file']
     fixture = read_fixture(fixture_file)
 
     # Process Plate files into list of np.array
     plate_files = request.files.getlist("file[]")
-    plateList = read_plates(plate_files)
+    plateList = read_plates(plate_files, ply_thickness)
 
     # Create temp directory (cwd/reports/..)
     generator_dir = os.path.join(cwd, 'reports')
     Path(generator_dir).mkdir(parents=True, exist_ok=True)
 
     # Initialize generator
-    generator = Generator(fixture=fixture, plateList=plateList, cwd=generator_dir, scanner=scanner_name)
+    generator = Generator(fixture=fixture, plateList=plateList, cwd=generator_dir,
+                          scanner=scanner_name, ply_thickness=ply_thickness)
     generator.process_plates()
 
     # Zip files into cwd/reports.zip
