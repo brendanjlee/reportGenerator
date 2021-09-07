@@ -104,7 +104,7 @@ class Plate:
     file_content += ('Thickness_StdDev, {}'.format(self.get_stddev()))
 
     # save to csv file
-    csvPath = os.path.join(self.plate_dir, self.name + '_csv.csv')
+    csvPath = os.path.join(self.plate_dir, self.name + '.csv')
     f = open(csvPath, 'w')
     f.write(file_content)
     f.close()
@@ -130,7 +130,7 @@ class Plate:
 
     # TODO find a way to return object
     # save to png file
-    histoPath = os.path.join(self.plate_dir, self.name + '_hist.png')
+    histoPath = os.path.join(self.plate_dir, self.name + '-hist.png')
     plt.savefig(histoPath)
     plt.clf()
 
@@ -185,7 +185,7 @@ class Plate:
     plt.scatter(X, Y, marker=".", c='black')
 
     # save to png file
-    heatPath = os.path.join(self.plate_dir, self.name + '_heat.png')
+    heatPath = os.path.join(self.plate_dir, self.name + '-heat.png')
     plt.savefig(heatPath)
     plt.clf()
 
@@ -220,18 +220,22 @@ class Plate:
 
     # Purdue Logo
     im = Image.open(resource_path('logos/purdue_logo.png'))
+    #im = Image.open(resource_path('reportGenerator/logos/purdue_logo.png'))
     can.drawInlineImage(im, 20, 740, width=100.44, height=30)
 
     # Fermi Logo
     im = Image.open(resource_path('logos/fermi_logo.png'))
+    #im = Image.open(resource_path('reportGenerator/logos/fermi_logo.png'))
     can.drawInlineImage(im, 173, 740, width=100, height=41)
 
     # CMS Logo
     im = Image.open(resource_path('logos/cms_logo.png'))
+    #im = Image.open(resource_path('reportGenerator/logos/cms_logo.png'))
     can.drawInlineImage(im, 326, 720, width=70, height=70)
 
     # CMSC Logo
     im = Image.open(resource_path('logos/cmsc_logo.png'))
+    #im = Image.open(resource_path('reportGenerator/logos/cmsc_logo.png'))
     can.drawInlineImage(im, 461, 720, width=90, height=90)
 
     # Write Date
